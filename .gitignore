@@ -4,3 +4,8 @@ __pycache__/
 *.pth
 data/raw_data.csv
 data/processed_data.csv
+# Python virtual environments
+venv/
+__pycache__/
+*.pyc
+
