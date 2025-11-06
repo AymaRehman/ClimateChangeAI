@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.pkl
+*.pth
+data/raw_data.csv
+data/processed_data.csv
