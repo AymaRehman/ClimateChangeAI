@@ -5,4 +5,4 @@ seaborn
 scikit-learn
 torch
 PyQt5
-python-opcua
+opcua
