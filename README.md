@@ -27,7 +27,8 @@ ClimateChangeAI/
 ├── gui/                          # Graphical User Interface (SCADA system)
 │   ├── main_window.py
 │   ├── plc_simulation_window.py
-│   ├── process_window.py
+│   ├── process_window1.py
+│   ├── process_window2.py
 │   ├── statistics_window.py
 │   └── __pycache__/              # Compiled Python cache files
 │
