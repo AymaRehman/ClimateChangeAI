@@ -1,84 +1,68 @@
+# Historical Temperature Visualization Window
 import sys
 import os
-sys.path.append(os.path.abspath(".."))
-
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import matplotlib.pyplot as plt
-import torch
-import numpy as np
 import pandas as pd
-from utils.data_loader import load_and_preprocess
-from model.climate_model import TempPredictor
+import matplotlib.pyplot as plt
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSlider
+from PyQt5.QtCore import Qt, QTimer
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-
-class ProcessWindow(QWidget):
+class ProcessWindow1(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Process Visualization Window")
+        self.setWindowTitle("Process Window 1 - Historical Temperature")
         self.setGeometry(180, 180, 800, 500)
-        self.initUI()
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
 
-    def initUI(self):
-        layout = QVBoxLayout()
+        # Load data
+        self.df = pd.read_csv("data/raw_data.csv").dropna(subset=["LandAverageTemperature"])
+        self.df["dt"] = pd.to_datetime(self.df["dt"])
+        self.temps = self.df["LandAverageTemperature"].values
+        self.time_steps = len(self.temps)
 
-        # ---- Title ----
-        title = QLabel("🌍 Climate Process Visualization")
-        title.setStyleSheet("font-size: 18px; font-weight: bold;")
-        layout.addWidget(title)
+        # Plot figure
+        self.fig, self.ax = plt.subplots(figsize=(7, 4))
+        self.canvas = FigureCanvas(self.fig)
+        self.layout.addWidget(self.canvas)
 
-        # ---- Load Data & Model ----
-        try:
-            X_train, X_val, X_test, y_train, y_val, y_test, scaler_X, scaler_y = load_and_preprocess(
-                path="data/raw_data.csv", lags=5
-            )
+        # Slider
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setMinimum(0)
+        self.slider.setMaximum(self.time_steps - 1)
+        self.slider.setValue(0)
+        self.slider.valueChanged.connect(self.update_display)
+        self.layout.addWidget(self.slider)
 
-            model = TempPredictor(input_size=X_train.shape[1], hidden_size=64)
-            model.load_state_dict(torch.load("model/trained_model.pth"))
-            model.eval()
+        # Timer for animation
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.auto_update)
+        self.auto_index = 0
+        self.timer.start(100)
 
-            with torch.no_grad():
-                X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
-                preds = model(X_test_tensor).numpy()
+        self.update_display(0)
 
-            y_pred = scaler_y.inverse_transform(preds)
-            y_true = scaler_y.inverse_transform(y_test.reshape(-1, 1))
-        except Exception as e:
-            y_true, y_pred = np.zeros((100, 1)), np.zeros((100, 1))
-            print(f"Error loading model/data: {e}")
+    def auto_update(self):
+        if self.auto_index < self.time_steps:
+            self.slider.setValue(self.auto_index)
+            self.auto_index += 1
+        else:
+            self.auto_index = 0
 
-        # ---- Plot 1: Historical trend ----
-        fig1, ax1 = plt.subplots(figsize=(6, 3))
-        df = pd.read_csv("data/raw_data.csv").dropna(subset=["LandAverageTemperature"])
-        df["dt"] = pd.to_datetime(df["dt"])
-        ax1.plot(df["dt"].tail(300), df["LandAverageTemperature"].tail(300), color="green")
-        ax1.set_title("Historical Temperature Trend")
-        ax1.set_xlabel("Year")
-        ax1.set_ylabel("Average Temperature (°C)")
-        ax1.grid(True)
-
-        canvas1 = FigureCanvas(fig1)
-        layout.addWidget(canvas1)
-
-        # ---- Plot 2: Predicted vs Actual ----
-        fig2, ax2 = plt.subplots(figsize=(6, 3))
-        ax2.plot(y_true[-200:], label="Actual", color="blue")
-        ax2.plot(y_pred[-200:], label="Predicted", color="orange")
-        ax2.set_title("Predicted vs Actual Process Values")
-        ax2.set_xlabel("Time Steps")
-        ax2.set_ylabel("Temperature (°C)")
-        ax2.legend()
-        ax2.grid(True)
-
-        canvas2 = FigureCanvas(fig2)
-        layout.addWidget(canvas2)
-
-        self.setLayout(layout)
+    def update_display(self, index):
+        self.ax.clear()
+        self.ax.plot(range(index + 1), self.temps[:index + 1], color="green", label="Historical Temp")
+        self.ax.set_title("Historical Land Temperature")
+        self.ax.set_xlabel("Time Step")
+        self.ax.set_ylabel("Temperature (°C)")
+        self.ax.grid(True)
+        self.ax.legend()
+        self.canvas.draw()
 
 
 # Standalone test
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ProcessWindow()
+    window = ProcessWindow1()
     window.show()
     sys.exit(app.exec_())
