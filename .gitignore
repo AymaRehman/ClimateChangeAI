@@ -1,16 +1,12 @@
+# Ignore Python cache and binaries
 __pycache__/
 *.pyc
 *.pkl
 *.pth
-data/raw_data.csv
-data/processed_data.csv
-# Python virtual environments
-venv/
-__pycache__/
-*.pyc
 
+# Ignore virtual environments
 venv/
-__pycache__/
-*.pyc
 .DS_Store
 
+# Allow datasets to be tracked
+!data/*.csv
