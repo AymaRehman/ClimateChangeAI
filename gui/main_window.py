@@ -1,26 +1,25 @@
 import sys
 import os
-sys.path.append(os.path.abspath(".."))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget
 import torch
 from utils.data_loader import load_and_preprocess
 from model.climate_model import TempPredictor
 import numpy as np
 
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("SCADA Main Window")
-        self.setGeometry(100, 100, 600, 400)
+        self.setGeometry(100, 100, 600, 500)  # slightly taller for two process buttons
         self.initUI()
 
     def initUI(self):
-        # Central widget
         central_widget = QWidget()
         layout = QVBoxLayout()
 
-        # --- Load data and model to show latest prediction ---
+        # --- Load latest prediction ---
         try:
             X_train, X_val, X_test, y_train, y_val, y_test, scaler_X, scaler_y = load_and_preprocess(
                 path="data/raw_data.csv", lags=5
@@ -44,18 +43,21 @@ class MainWindow(QMainWindow):
         except Exception as e:
             info_text = f"Model or data unavailable.\nError: {e}"
 
-        # Project info with latest prediction
         self.info_label = QLabel(info_text)
         layout.addWidget(self.info_label)
 
-        # Buttons to open other windows
+        # --- Buttons to open windows ---
         self.stats_btn = QPushButton("Open Statistics Window")
         self.stats_btn.clicked.connect(self.open_statistics)
         layout.addWidget(self.stats_btn)
 
-        self.process_btn = QPushButton("Open Process Window")
-        self.process_btn.clicked.connect(self.open_process)
-        layout.addWidget(self.process_btn)
+        self.process1_btn = QPushButton("Open Process Window 1 (Historical Temp)")
+        self.process1_btn.clicked.connect(self.open_process1)
+        layout.addWidget(self.process1_btn)
+
+        self.process2_btn = QPushButton("Open Process Window 2 (Predicted vs Actual)")
+        self.process2_btn.clicked.connect(self.open_process2)
+        layout.addWidget(self.process2_btn)
 
         self.plc_btn = QPushButton("Open PLC Simulation Window")
         self.plc_btn.clicked.connect(self.open_plc)
@@ -72,10 +74,15 @@ class MainWindow(QMainWindow):
         self.stats_window = StatisticsWindow()
         self.stats_window.show()
 
-    def open_process(self):
-        from gui.process_window import ProcessWindow
-        self.process_window = ProcessWindow()
-        self.process_window.show()
+    def open_process1(self):
+        from gui.process_window1 import ProcessWindow1
+        self.process_window1 = ProcessWindow1()
+        self.process_window1.show()
+
+    def open_process2(self):
+        from gui.process_window2 import ProcessWindow2
+        self.process_window2 = ProcessWindow2()
+        self.process_window2.show()
 
     def open_plc(self):
         from gui.plc_simulation_window import PLCSimulationWindow
