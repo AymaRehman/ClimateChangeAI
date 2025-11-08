@@ -1,5 +1,7 @@
 import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import numpy as np
 import pandas as pd
 import torch
@@ -46,6 +48,14 @@ class PLCSimulationWindow(QWidget):
         self.canvas = FigureCanvas(self.fig)
         self.layout.addWidget(self.canvas)
 
+        # --- Alert label ---
+        self.alert_label = QLabel("")
+        self.alert_label.setAlignment(Qt.AlignCenter)
+        self.alert_label.setStyleSheet(
+            "font-size: 16px; font-weight: bold; color: white; padding: 4px; border-radius: 5px;"
+        )
+        self.layout.addWidget(self.alert_label)
+
         # --- Current temperature label ---
         self.temp_label = QLabel("Current Predicted Temp: -- °C")
         self.temp_label.setAlignment(Qt.AlignCenter)
@@ -66,7 +76,7 @@ class PLCSimulationWindow(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.auto_update)
         self.auto_index = 0
-        self.timer.start(150)  # 150ms per update for smoother animation
+        self.timer.start(150)  # 150ms per update
 
         self.update_display(0)
 
@@ -88,28 +98,37 @@ class PLCSimulationWindow(QWidget):
         self.ax.set_title("Temperature vs Time", fontsize=14, fontweight="bold")
         self.ax.grid(alpha=0.3)
         self.ax.legend()
-        self.ax.set_facecolor("#f7f7f7")  # light grey background
+        self.ax.set_facecolor("#f7f7f7")
 
         current_temp = self.model_preds[index]
         self.temp_label.setText(f"Current Predicted Temp: {current_temp:.2f} °C")
 
-        # --- Adaptive threshold using last 20 steps ---
+        # --- Adaptive threshold ---
         window = 20
         start_idx = max(0, index - window + 1)
         recent_vals = self.model_preds[start_idx : index + 1]
-        adaptive_threshold = np.mean(recent_vals) + 1.0 * np.std(recent_vals)  # more sensitive
+        adaptive_threshold = np.mean(recent_vals) + 1.0 * np.std(recent_vals)
 
-        # Update label color & background
+        # Update label color & textual alert
         if current_temp > adaptive_threshold:
             self.temp_label.setStyleSheet(
                 "font-size: 18px; font-weight: bold; background-color: red; color: white; padding: 6px; border-radius: 5px;"
+            )
+            self.alert_label.setText("⚠️ Temperature Above Adaptive Threshold!")
+            self.alert_label.setStyleSheet(
+                "font-size: 16px; font-weight: bold; color: white; background-color: red; padding: 4px; border-radius: 5px;"
             )
         else:
             self.temp_label.setStyleSheet(
                 "font-size: 18px; font-weight: bold; background-color: lightgreen; color: black; padding: 6px; border-radius: 5px;"
             )
+            self.alert_label.setText("Temperature Normal ✅")
+            self.alert_label.setStyleSheet(
+                "font-size: 16px; font-weight: bold; color: black; background-color: lightgreen; padding: 4px; border-radius: 5px;"
+            )
 
         self.canvas.draw()
+
 
 # --- Standalone run ---
 if __name__ == "__main__":
