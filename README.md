@@ -44,7 +44,6 @@ ClimateChangeAI/
 │
 ├── utils/                        # Helper modules
 │   ├── data_loader.py
-│   ├── plot_functions.py
 │   ├── predictions.py
 │   └── __pycache__/
 │
