@@ -1,6 +1,5 @@
 import sys
 import os
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel
@@ -13,7 +12,6 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from utils.data_loader import load_and_preprocess
 from model.climate_model import TempPredictor
 
-
 class StatisticsWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -24,18 +22,15 @@ class StatisticsWindow(QWidget):
     def initUI(self):
         layout = QVBoxLayout()
 
-        # ---- Load Data ----
         try:
             X_train, X_val, X_test, y_train, y_val, y_test, scaler_X, scaler_y = load_and_preprocess(
                 path="data/raw_data.csv", lags=5
             )
 
-            # ---- Load Model ----
             model = TempPredictor(input_size=X_train.shape[1], hidden_size=64)
             model.load_state_dict(torch.load("model/trained_model.pth"))
             model.eval()
 
-            # ---- Evaluate ----
             with torch.no_grad():
                 X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
                 preds = model(X_test_tensor).numpy()
@@ -52,30 +47,29 @@ class StatisticsWindow(QWidget):
         except Exception as e:
             metrics_text = f"Error loading data/model:\n{e}"
 
-        # ---- Display Metrics ----
         self.metrics_label = QLabel(metrics_text)
         layout.addWidget(self.metrics_label)
 
-        # ---- Plot Prediction vs Actual ----
         fig, ax = plt.subplots(figsize=(6, 4))
         if 'y_true' in locals():
-            ax.plot(y_true[-200:], label="Actual", color="blue")
-            ax.plot(y_pred[-200:], label="Predicted", color="orange")
+            df = pd.read_csv("data/raw_data.csv")
+            df["dt"] = pd.to_datetime(df["dt"])
+            dates = df["dt"].iloc[-len(y_true[-200:]):]
+            ax.plot(dates, y_true[-200:], label="Actual", color="blue")
+            ax.plot(dates, y_pred[-200:], label="Predicted", color="orange")
             ax.set_title("Model Prediction vs Actual Temperature")
-            ax.set_xlabel("Time Steps")
+            ax.set_xlabel("Date")
             ax.set_ylabel("Temperature (°C)")
+            ax.tick_params(axis="x", rotation=45)
             ax.legend()
             ax.grid(True)
         else:
-            ax.text(0.5, 0.5, "No data available", ha='center', va='center')
+            ax.text(0.5, 0.5, "No data available", ha="center", va="center")
 
         canvas = FigureCanvas(fig)
         layout.addWidget(canvas)
-
         self.setLayout(layout)
 
-
-# Standalone test
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = StatisticsWindow()

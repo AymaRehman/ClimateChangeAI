@@ -23,6 +23,7 @@ class PLCSimulationWindow(QWidget):
 
         # --- Load dataset ---
         self.df = pd.read_csv("data/raw_data.csv")
+        self.df["dt"] = pd.to_datetime(self.df["dt"])
         self.temps = self.df["LandAverageTemperature"].ffill().values
         self.time_steps = len(self.temps)
 
@@ -42,6 +43,7 @@ class PLCSimulationWindow(QWidget):
         min_len = min(len(self.temps), len(self.model_preds))
         self.temps = self.temps[:min_len]
         self.model_preds = self.model_preds[:min_len]
+        self.dates = self.df["dt"].iloc[:min_len].reset_index(drop=True)
 
         # --- Matplotlib Figure ---
         self.fig, self.ax = plt.subplots(figsize=(7, 4))
@@ -76,7 +78,7 @@ class PLCSimulationWindow(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.auto_update)
         self.auto_index = 0
-        self.timer.start(150)  # 150ms per update
+        self.timer.start(150)
 
         self.update_display(0)
 
@@ -91,11 +93,12 @@ class PLCSimulationWindow(QWidget):
         self.ax.clear()
 
         # Plot actual and predicted temperatures
-        self.ax.plot(range(index + 1), self.temps[:index + 1], label="Actual Temp", color="#1f77b4")
-        self.ax.plot(range(index + 1), self.model_preds[:index + 1], label="Predicted Temp", color="#ff7f0e")
-        self.ax.set_xlabel("Time Step", fontsize=12)
+        self.ax.plot(self.dates.iloc[: index + 1], self.temps[:index + 1], label="Actual Temp", color="#1f77b4")
+        self.ax.plot(self.dates.iloc[: index + 1], self.model_preds[:index + 1], label="Predicted Temp", color="#ff7f0e")
+        self.ax.set_xlabel("Date", fontsize=12)
         self.ax.set_ylabel("Temperature (°C)", fontsize=12)
-        self.ax.set_title("Temperature vs Time", fontsize=14, fontweight="bold")
+        self.ax.set_title("Temperature vs Date", fontsize=14, fontweight="bold")
+        self.ax.tick_params(axis="x", rotation=45)
         self.ax.grid(alpha=0.3)
         self.ax.legend()
         self.ax.set_facecolor("#f7f7f7")
@@ -109,7 +112,7 @@ class PLCSimulationWindow(QWidget):
         recent_vals = self.model_preds[start_idx : index + 1]
         adaptive_threshold = np.mean(recent_vals) + 1.0 * np.std(recent_vals)
 
-        # Update label color & textual alert
+        # Update label color & alert
         if current_temp > adaptive_threshold:
             self.temp_label.setStyleSheet(
                 "font-size: 18px; font-weight: bold; background-color: red; color: white; padding: 6px; border-radius: 5px;"
@@ -130,7 +133,6 @@ class PLCSimulationWindow(QWidget):
         self.canvas.draw()
 
 
-# --- Standalone run ---
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = PLCSimulationWindow()

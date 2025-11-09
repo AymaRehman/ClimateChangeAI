@@ -1,11 +1,11 @@
 # Predicted vs Actual Temperature Visualization Window
 import sys
 import os
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import numpy as np
 import torch
+import pandas as pd
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSlider
 from PyQt5.QtCore import Qt, QTimer
@@ -34,10 +34,17 @@ class ProcessWindow2(QWidget):
                 preds = model(X_test_tensor).numpy()
             self.y_pred = scaler_y.inverse_transform(preds).flatten()
             self.y_true = scaler_y.inverse_transform(y_test.reshape(-1, 1)).flatten()
+
+            # Get matching date range for test data
+            df = pd.read_csv("data/raw_data.csv").dropna(subset=["LandAverageTemperature"])
+            df["dt"] = pd.to_datetime(df["dt"])
+            self.dates = df["dt"].iloc[-len(self.y_pred):].reset_index(drop=True)
+
         except Exception as e:
             print(f"Error loading model/data: {e}")
             self.y_pred = np.zeros(100)
             self.y_true = np.zeros(100)
+            self.dates = pd.date_range(start="2000-01-01", periods=100, freq="M")
 
         self.time_steps = len(self.y_pred)
 
@@ -71,11 +78,12 @@ class ProcessWindow2(QWidget):
 
     def update_display(self, index):
         self.ax.clear()
-        self.ax.plot(range(index + 1), self.y_true[:index + 1], label="Actual Temp", color="blue")
-        self.ax.plot(range(index + 1), self.y_pred[:index + 1], label="Predicted Temp", color="orange")
+        self.ax.plot(self.dates.iloc[: index + 1], self.y_true[:index + 1], label="Actual Temp", color="blue")
+        self.ax.plot(self.dates.iloc[: index + 1], self.y_pred[:index + 1], label="Predicted Temp", color="orange")
         self.ax.set_title("Predicted vs Actual Temperature")
-        self.ax.set_xlabel("Time Step")
+        self.ax.set_xlabel("Date")
         self.ax.set_ylabel("Temperature (°C)")
+        self.ax.tick_params(axis="x", rotation=45)
         self.ax.grid(True)
         self.ax.legend()
         self.canvas.draw()

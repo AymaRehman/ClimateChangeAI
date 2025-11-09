@@ -51,9 +51,11 @@ class ProcessWindow1(QWidget):
 
     def update_display(self, index):
         self.ax.clear()
-        self.ax.plot(range(index + 1), self.temps[:index + 1], color="green", label="Historical Temp")
+        dates = self.df["dt"].iloc[: index + 1]
+        self.ax.plot(dates, self.temps[:index + 1], color="green", label="Historical Temp")
         self.ax.set_title("Historical Land Temperature")
-        self.ax.set_xlabel("Time Step")
+        self.ax.set_xlabel("Date")
+        self.ax.tick_params(axis='x', rotation=45)
         self.ax.set_ylabel("Temperature (°C)")
         self.ax.grid(True)
         self.ax.legend()
